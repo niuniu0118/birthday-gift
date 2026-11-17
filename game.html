@@ -303,10 +303,6 @@
             gameState = 'over';
             cancelAnimationFrame(gameLoop);
             clearInterval(spawnInterval);
-            
-            const gameBgm = document.getElementById('game-bgm');
-            if (gameBgm) gameBgm.pause();
-
             winSound.play().catch(e => console.log(e));
 
             endTitle.textContent = "✨ 😎 薛迪凯，就这？";
