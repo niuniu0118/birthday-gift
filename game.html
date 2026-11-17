@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>咕咕的星光大逃亡</title>
+    <title>别碰我，我还要过生日！</title>
     <style>
         body {
             margin: 0; padding: 0; background: #0d0d1a; color: #ffd700;
@@ -62,14 +62,14 @@
         <canvas id="gameCanvas" width="800" height="500"></canvas>
         
         <div id="ui">
-            <div id="timer">逃亡时间: 0.0s / 20.0s</div>
-            <div id="hp" style="color: #00e5ff; margin-top: 5px;">咕咕体力: 💎💎💎</div>
+            <div id="timer">走位时间: 0.0s / 20.0s</div>
+            <div id="hp" style="color: #00e5ff; margin-top: 5px;">精灵体力: 💎💎💎</div>
         </div>
 
         <!-- 开始界面 -->
         <div id="start-screen">
-            <h1>✨ 咕咕的星光大逃亡</h1>
-            <p>艾泽拉斯的星光乱流来袭！<br>使用【鼠标拖动】或【WASD/方向键】控制咕咕灵活走位。<br>躲开越来越快的星光球，坚持 20 秒，解锁贺贺的专属惊喜！</p>
+            <h1>✨ 别碰我，我还要过生日！</h1>
+            <p>艾泽拉斯的星光乱流来袭！<br>使用【鼠标拖动】或【WASD/方向键】控制精灵灵活走位。<br>躲开越来越快的星光球，坚持 20 秒，解锁贺贺的专属惊喜！</p>
             <button id="start-btn">进入星光</button>
         </div>
 
@@ -293,10 +293,10 @@
         }
 
         function updateUI() {
-            timerEl.textContent = `逃亡时间: ${surviveTime.toFixed(1)}s / 20.0s`;
+            timerEl.textContent = `走位时间: ${surviveTime.toFixed(1)}s / 20.0s`;
             let diamonds = '';
             for(let i=0; i<3; i++) diamonds += (i < hp) ? '💎' : '🖤';
-            hpEl.textContent = `咕咕体力: ${diamonds}`;
+            hpEl.textContent = `精灵体力: ${diamonds}`;
         }
 
         function winGame() {
@@ -309,9 +309,9 @@
 
             winSound.play().catch(e => console.log(e));
 
-            endTitle.textContent = "✨ 走位大师！";
+            endTitle.textContent = "✨ 😎 薛迪凯，就这？";
             endTitle.style.color = "#00e5ff";
-            endDesc.textContent = "你完美躲开了所有星光乱流，解锁了专属惊喜！";
+            endDesc.textContent = "你完美躲开了所有星光乱流，快扫码领取贺贺的专属礼物吧！";
             
             showGiftBtn.classList.remove('hidden');
             endScreen.classList.remove('hidden');
@@ -322,7 +322,7 @@
             cancelAnimationFrame(gameLoop);
             clearInterval(spawnInterval);
 
-            endTitle.textContent = "😭 咕咕被晃晕了";
+            endTitle.textContent = "😭 精灵被晃晕了";
             endTitle.style.color = "#ffd700";
             endDesc.textContent = "星光太刺眼啦！再试一次吧！";
             
