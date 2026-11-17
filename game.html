@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>咕咕的星光大逃亡</title>
+    <style>
+        body {
+            margin: 0; padding: 0; background: #0d0d1a; color: #ffd700;
+            font-family: "Microsoft YaHei", sans-serif; display: flex;
+            flex-direction: column; align-items: center; justify-content: center;
+            height: 100vh; overflow: hidden;
+        }
+        #game-container {
+            position: relative; border: 4px solid #4a148c;
+            box-shadow: 0 0 50px rgba(138, 43, 226, 0.6); border-radius: 10px;
+            background: radial-gradient(circle at center, #1a1a3e, #0a0a1a); overflow: hidden;
+        }
+        canvas { display: block; }
+        #ui {
+            position: absolute; top: 15px; left: 15px; font-size: 22px;
+            font-weight: bold; text-shadow: 2px 2px 4px #000; pointer-events: none;
+        }
+        #start-screen, #end-screen {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column;
+            align-items: center; justify-content: center; text-align: center; padding: 20px;
+        }
+        h1 { color: #00e5ff; margin-bottom: 15px; font-size: 2.2rem; text-shadow: 0 0 15px #00e5ff; }
+        p { font-size: 1.1rem; margin-bottom: 20px; line-height: 1.6; color: #e0d5c1; }
+        button {
+            padding: 12px 30px; font-size: 1.2rem; background: #4a148c; color: white;
+            border: 2px solid #00e5ff; border-radius: 6px; cursor: pointer;
+            font-weight: bold; transition: 0.2s; margin: 5px;
+        }
+        button:hover { background: #6a1b9a; transform: scale(1.05); box-shadow: 0 0 15px #00e5ff; }
+        .hidden { display: none !important; }
+        .gift-btn {
+            background: #ffd700; color: #1a0f05; border: 2px solid #fff;
+            box-shadow: 0 0 20px #ffd700; animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+    <audio id="winSound" src="game_voice.mp3"></audio>
+    <audio id="timoSound" src="teemo-laugh_converted.wav"></audio>
+    <audio id="game-bgm" src="tavern.mp3" loop></audio>
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+        
+        <div id="ui">
+            <div id="timer">逃亡时间: 0.0s / 20.0s</div>
+            <div id="hp" style="color: #00e5ff; margin-top: 5px;">咕咕体力: 💎💎💎</div>
+        </div>
+
+        <!-- 开始界面 -->
+        <div id="start-screen">
+            <h1>✨ 咕咕的星光大逃亡</h1>
+            <p>艾泽拉斯的星光乱流来袭！<br>使用【鼠标拖动】或【WASD/方向键】控制咕咕灵活走位。<br>躲开越来越快的星光球，坚持 20 秒，解锁贺贺的专属惊喜！</p>
+            <button id="start-btn">进入星光</button>
+        </div>
+
+        <!-- 结束界面 -->
+        <div id="end-screen" class="hidden">
+            <h1 id="end-title">游戏结束</h1>
+            <p id="end-desc">再试一次吧！</p>
+            <button id="restart-btn" style="background: #333;">再来一次</button>
+            <button id="show-gift-btn" class="gift-btn hidden">🎁 领取生日惊喜</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('start-screen');
+        const endScreen = document.getElementById('end-screen');
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const showGiftBtn = document.getElementById('show-gift-btn');
+        const timerEl = document.getElementById('timer');
+        const hpEl = document.getElementById('hp');
+        const endTitle = document.getElementById('end-title');
+        const endDesc = document.getElementById('end-desc');
+        
+        const winSound = document.getElementById('winSound');
+        const timoSound = document.getElementById('timoSound');
+
+        let gameLoop;
+        let gameState = 'menu'; 
+        let surviveTime = 0;
+        let hp = 3;
+        let enemies = [];
+        let spawnInterval;
+
+        const guguImg = new Image();
+        guguImg.src = 'avatar.png'; 
+
+        const player = { x: 400, y: 400, radius: 25, speed: 9 };
+
+        const keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false };
+        let isDragging = false;
+
+        window.addEventListener('keydown', (e) => { if(keys.hasOwnProperty(e.key)) keys[e.key] = true; });
+        window.addEventListener('keyup', (e) => { if(keys.hasOwnProperty(e.key)) keys[e.key] = false; });
+
+        canvas.addEventListener('mousedown', (e) => { isDragging = true; movePlayerToMouse(e); });
+        canvas.addEventListener('mousemove', (e) => { if(isDragging) movePlayerToMouse(e); });
+        window.addEventListener('mouseup', () => { isDragging = false; });
+        
+        canvas.addEventListener('touchstart', (e) => { isDragging = true; movePlayerToTouch(e); e.preventDefault(); });
+        canvas.addEventListener('touchmove', (e) => { if(isDragging) movePlayerToTouch(e); e.preventDefault(); });
+        window.addEventListener('touchend', () => { isDragging = false; });
+
+        function movePlayerToMouse(e) {
+            const rect = canvas.getBoundingClientRect();
+            player.x = e.clientX - rect.left;
+            player.y = e.clientY - rect.top;
+        }
+        function movePlayerToTouch(e) {
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            player.x = touch.clientX - rect.left;
+            player.y = touch.clientY - rect.top;
+        }
+
+                function startGame() {
+            startScreen.classList.add('hidden');
+            endScreen.classList.add('hidden');
+            gameState = 'playing';
+
+            // 👇 新增：点击开始按钮，播放酒馆 BGM
+            const gameBgm = document.getElementById('game-bgm');
+            if (gameBgm) {
+                gameBgm.volume = 0.4; // 音量 40%
+                gameBgm.play().catch(err => console.log('音乐播放失败:', err));
+            }
+
+            surviveTime = 0;
+            hp = 3;
+            enemies = [];
+            player.x = 400;
+            player.y = 400;
+            updateUI();
+
+            if(gameLoop) cancelAnimationFrame(gameLoop);
+            if(spawnInterval) clearInterval(spawnInterval);
+
+            // 计时器
+            let lastTime = performance.now();
+            function gameTimer(now) {
+                if(gameState !== 'playing') return;
+                let dt = (now - lastTime) / 1000;
+                lastTime = now;
+                surviveTime += dt;
+                
+                if (surviveTime >= 20) {
+                    winGame();
+                    return;
+                }
+                updateUI();
+                requestAnimationFrame(gameTimer);
+            }
+            requestAnimationFrame(gameTimer);
+
+            // 生成星光弹幕（越来越快）
+            spawnInterval = setInterval(() => {
+                if (gameState !== 'playing') return;
+                spawnEnemy();
+            }, Math.max(100, 350 - surviveTime * 10)); 
+
+            requestAnimationFrame(update);
+        }
+
+        function spawnEnemy() {
+            const edge = Math.floor(Math.random() * 4);
+            let x, y;
+            const speed = (2.5 + Math.random() * 2.5) + (surviveTime * 0.1); 
+            const types = ['cyan', 'magenta', 'yellow'];
+            const colorType = types[Math.floor(Math.random() * types.length)];
+
+            if (edge === 0) { x = Math.random() * canvas.width; y = -20; }
+            else if (edge === 1) { x = canvas.width + 20; y = Math.random() * canvas.height; }
+            else if (edge === 2) { x = Math.random() * canvas.width; y = canvas.height + 20; }
+            else { x = -20; y = Math.random() * canvas.height; }
+
+            const angle = Math.atan2(player.y - y, player.x - x);
+            
+            enemies.push({
+                x: x, y: y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                radius: 12,
+                color: colorType,
+                phase: Math.random() * Math.PI * 2 // 用于螺旋运动
+            });
+        }
+
+        function update() {
+            if (gameState !== 'playing') return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 移动
+            if (keys.w || keys.ArrowUp) player.y -= player.speed;
+            if (keys.s || keys.ArrowDown) player.y += player.speed;
+            if (keys.a || keys.ArrowLeft) player.x -= player.speed;
+            if (keys.d || keys.ArrowRight) player.x += player.speed;
+
+            player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+            player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+
+            // 绘制咕咕（带有发光拖尾效果）
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#fff';
+                        // 绘制头像（带圆形裁剪）
+            if(guguImg.complete) {
+                ctx.save(); // 保存画布状态
+                ctx.beginPath();
+                // 画一个圆
+                ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.clip(); // 裁剪成圆
+                
+                // 画头像
+                ctx.drawImage(guguImg, player.x - player.radius, player.y - player.radius, player.radius*2, player.radius*2);
+                ctx.restore(); // 恢复画布状态
+                
+                // 给头像加一个金色发光边框
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = '#ffd700'; // 金色
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#ffd700';
+                ctx.stroke();
+                ctx.shadowBlur = 0; 
+            } else {
+                // 如果图片没加载出来，显示金色圆圈保底
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffd700';
+                ctx.fill();
+            }
+            ctx.shadowBlur = 0;
+
+            // 绘制星光弹幕
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let e = enemies[i];
+                
+                // 增加一点轻微的螺旋/漂移轨迹，增加难度
+                e.phase += 0.05;
+                e.x += e.vx + Math.sin(e.phase) * 0.5;
+                e.y += e.vy + Math.cos(e.phase) * 0.5;
+
+                // 画星光
+                ctx.beginPath();
+                ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+                ctx.fillStyle = e.color;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = e.color;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // 碰撞检测
+                const dist = Math.hypot(player.x - e.x, player.y - e.y);
+                if (dist < player.radius + e.radius - 5) {
+                    enemies.splice(i, 1);
+                    takeDamage();
+                } else if (e.x < -50 || e.x > canvas.width + 50 || e.y < -50 || e.y > canvas.height + 50) {
+                    enemies.splice(i, 1);
+                }
+            }
+            gameLoop = requestAnimationFrame(update);
+        }
+
+        function takeDamage() {
+            hp--;
+            updateUI();
+            
+            timoSound.currentTime = 0;
+            timoSound.play().catch(e => console.log(e));
+
+            canvas.style.transform = `translate(${Math.random()*15-7}px, ${Math.random()*15-7}px)`;
+            canvas.style.borderColor = '#ff0000';
+            setTimeout(() => {
+                canvas.style.transform = 'translate(0,0)';
+                canvas.style.borderColor = '#4a148c';
+            }, 150);
+
+            if (hp <= 0) loseGame();
+        }
+
+        function updateUI() {
+            timerEl.textContent = `逃亡时间: ${surviveTime.toFixed(1)}s / 20.0s`;
+            let diamonds = '';
+            for(let i=0; i<3; i++) diamonds += (i < hp) ? '💎' : '🖤';
+            hpEl.textContent = `咕咕体力: ${diamonds}`;
+        }
+
+                function winGame() {
+            gameState = 'over';
+            cancelAnimationFrame(gameLoop);
+            clearInterval(spawnInterval);
+            
+            // 👇 新增：通关时，立刻把酒馆音乐关掉
+            const gameBgm = document.getElementById('game-bgm');
+            if (gameBgm) gameBgm.pause();
+
+            // 播放你的专属通关录音
+            winSound.play().catch(e => console.log(e));
+
+            endTitle.textContent = "✨ 走位大师！";
+            endTitle.style.color = "#00e5ff";
+            endDesc.textContent = "你完美躲开了所有星光乱流，解锁了专属惊喜！";
+            
+            showGiftBtn.classList.remove('hidden');
+            endScreen.classList.remove('hidden');
+        }
+
+        function loseGame() {
+            gameState = 'over';
+            cancelAnimationFrame(gameLoop);
+            clearInterval(spawnInterval);
+
+            endTitle.textContent = "😭 咕咕被晃晕了";
+            endTitle.style.color = "#ffd700";
+            endDesc.textContent = "星光太刺眼啦！再试一次吧！";
+            
+            showGiftBtn.classList.add('hidden');
+            endScreen.classList.remove('hidden');
+        }
+
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+        
+        showGiftBtn.addEventListener('click', () => {
+                showGiftBtn.addEventListener('click', () => {
+            // 1. 记录通关
+            localStorage.setItem('gameCleared', 'true');
+
+            // 2. 创建全屏弹窗
+            const wechatModal = document.createElement('div');
+            wechatModal.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column;
+                align-items: center; justify-content: center; z-index: 999;
+                overflow: hidden; 
+            `;
+
+            // ... (中间的烟花代码全部粘贴进来) ...
+
+            // 关闭弹窗并清理定时器
+            document.getElementById('close-wechat').addEventListener('click', () => {
+                clearInterval(fireworkTimer);
+                cancelAnimationFrame(animationFrameId);
+                wechatModal.remove();
+            });
+        });
+        });
+    </script>
+</body>
+</html>

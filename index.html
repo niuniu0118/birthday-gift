@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生日快乐，贺贺</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+       <!-- 开场遮罩层 -->
+    <div id="start-overlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #0d0d1a; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;">
+        <h1 style="color: #ffd700; font-size: 2.5rem; text-shadow: 0 0 20px #ffd700; margin-bottom: 20px;">🎵 点击进入艾泽拉斯</h1>
+        <p style="color: #e0d5c1; font-size: 1.2rem;">（请打开声音，贺贺的专属电台即将开播）</p>
+    </div>
+    <h1>🗺️ 点击地图上的牛头咕咕，寻找贺贺的生日祝福</h1>
+    <div class="map-container">
+        <img src="map.jpg" alt="艾泽拉斯地图" class="map-img">
+        <img src="gugu1.png" alt="咕咕1" class="gugu hotspot" data-id="1" style="top: 65%; left: 35%;">
+        <img src="gugu2.png" alt="咕咕2" class="gugu hotspot" data-id="2" style="top: 30%; left: 55%;">
+        <img src="gugu3.png" alt="咕咕3" class="gugu hotspot" data-id="3" style="top: 78%; left: 62%;">
+    </div>
+    <div id="popup" class="popup hidden">
+        <div class="popup-content">
+            <p id="popup-text"></p>
+            <button id="close-btn">关闭</button>
+        </div>
+    </div>
+    <div id="achievement" class="achievement hidden">
+        <div class="achievement-box">
+                    <h2>🏆 成就达成：《你被咕咕盯上了》</h2>
+            <p>提莫的贱笑 ×3，牛头人对贺贺的祝福 ×1</p>
+            <p class="reward" style="color: #ff6b6b;">🎁 完成小游戏，即可解锁真实礼物</p>
+            
+            <!-- 游戏入口按钮 -->
+            <button onclick="window.location.href='game.html'" style="display: block; margin: 10px auto; background: #8b1a1a; color: #fff; border: 2px solid #ffd700; padding: 10px 30px; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; width: 80%;">去暗月马戏团玩小游戏</button>
+            
+            <!-- 领奖按钮：初始是灰色的锁定状态 -->
+            <button id="gift-btn" onclick="alert('先去通关小游戏才能解锁礼物哦！')" style="display: block; margin: 10px auto; background: #444; color: #999; border: 2px solid #666; padding: 10px 30px; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: not-allowed; width: 80%;">🔒 领取礼物 (未解锁)</button>
+        </div>
+    </div>
+    <audio id="bgm-music" src="tavern.mp3" loop></audio>
+    <audio id="timo-sound" src="teemo-laugh_converted.wav"></audio>
+    <script>
+    // 检查贺贺是否已经通关过游戏
+    document.addEventListener("DOMContentLoaded", function() {
+        if (localStorage.getItem('gameCleared') === 'true') {
+            const giftBtn = document.getElementById('gift-btn');
+            giftBtn.style.background = '#ffd700';
+            giftBtn.style.color = '#1a0f05';
+            giftBtn.style.border = '2px solid #fff';
+            giftBtn.style.cursor = 'pointer';
+            giftBtn.innerHTML = '🎁 领取真实礼物';
+            
+            giftBtn.onclick = function() {
+                alert('恭喜通关！礼物就是……快去找寿星领取吧！🎉'); 
+            };
+        }
+    });
+</script>
+    <script src="script.js"></script>
+</body>
+</html>
