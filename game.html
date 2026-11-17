@@ -11,26 +11,21 @@
             flex-direction: column; align-items: center; justify-content: center;
             height: 100vh; overflow: hidden;
         }
-                #game-container {
+        #game-container {
             position: relative;
             border: 4px solid #4a148c;
             box-shadow: 0 0 50px rgba(138, 43, 226, 0.6);
             background: radial-gradient(circle at center, #1a1a3e, #0a0a1a);
             overflow: hidden;
-            width: 100vw; 
-            height: 100vh; 
-            max-width: 100%;
-            max-height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            width: 95vw;
+            height: 85vh;
+            max-width: 1000px;
         }
         canvas {
             display: block;
             width: 100%;
             height: 100%;
-            object-fit: contain; 
-        }
+            object-fit: contain;
         }
         #ui {
             position: absolute; top: 15px; left: 15px; font-size: 22px;
@@ -62,6 +57,7 @@
     <audio id="winSound" src="game_voice.mp3"></audio>
     <audio id="timoSound" src="teemo-laugh_converted.wav"></audio>
     <audio id="game-bgm" src="tavern.mp3" loop></audio>
+    
     <div id="game-container">
         <canvas id="gameCanvas" width="800" height="500"></canvas>
         
@@ -128,32 +124,30 @@
         canvas.addEventListener('touchmove', (e) => { if(isDragging) movePlayerToTouch(e); e.preventDefault(); });
         window.addEventListener('touchend', () => { isDragging = false; });
 
-               function movePlayerToMouse(e) {
+        function movePlayerToMouse(e) {
             const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            player.x = (e.clientX - rect.left) * scaleX;
-            player.y = (e.clientY - rect.top) * scaleY;
+            player.x = e.clientX - rect.left;
+            player.y = e.clientY - rect.top;
         }
         
         function movePlayerToTouch(e) {
             const rect = canvas.getBoundingClientRect();
             const touch = e.touches[0];
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            player.x = (touch.clientX - rect.left) * scaleX;
-            player.y = (touch.clientY - rect.top) * scaleY;
+            player.x = touch.clientX - rect.left;
+            player.y = touch.clientY - rect.top;
         }
 
-                function startGame() {
+        function startGame() {
             startScreen.classList.add('hidden');
             endScreen.classList.add('hidden');
             gameState = 'playing';
+            
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
 
-            // 👇 新增：点击开始按钮，播放酒馆 BGM
             const gameBgm = document.getElementById('game-bgm');
             if (gameBgm) {
-                gameBgm.volume = 0.4; // 音量 40%
+                gameBgm.volume = 0.4; 
                 gameBgm.play().catch(err => console.log('音乐播放失败:', err));
             }
 
@@ -167,7 +161,6 @@
             if(gameLoop) cancelAnimationFrame(gameLoop);
             if(spawnInterval) clearInterval(spawnInterval);
 
-            // 计时器
             let lastTime = performance.now();
             function gameTimer(now) {
                 if(gameState !== 'playing') return;
@@ -184,7 +177,6 @@
             }
             requestAnimationFrame(gameTimer);
 
-            // 生成星光弹幕（越来越快）
             spawnInterval = setInterval(() => {
                 if (gameState !== 'playing') return;
                 spawnEnemy();
@@ -213,7 +205,7 @@
                 vy: Math.sin(angle) * speed,
                 radius: 12,
                 color: colorType,
-                phase: Math.random() * Math.PI * 2 // 用于螺旋运动
+                phase: Math.random() * Math.PI * 2 
             });
         }
 
@@ -221,7 +213,6 @@
             if (gameState !== 'playing') return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // 移动
             if (keys.w || keys.ArrowUp) player.y -= player.speed;
             if (keys.s || keys.ArrowDown) player.y += player.speed;
             if (keys.a || keys.ArrowLeft) player.x -= player.speed;
@@ -230,33 +221,27 @@
             player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
             player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
 
-            // 绘制咕咕（带有发光拖尾效果）
             ctx.shadowBlur = 15;
             ctx.shadowColor = '#fff';
-                        // 绘制头像（带圆形裁剪）
+            
             if(guguImg.complete) {
-                ctx.save(); // 保存画布状态
+                ctx.save(); 
                 ctx.beginPath();
-                // 画一个圆
                 ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
                 ctx.closePath();
-                ctx.clip(); // 裁剪成圆
-                
-                // 画头像
+                ctx.clip(); 
                 ctx.drawImage(guguImg, player.x - player.radius, player.y - player.radius, player.radius*2, player.radius*2);
-                ctx.restore(); // 恢复画布状态
+                ctx.restore(); 
                 
-                // 给头像加一个金色发光边框
                 ctx.beginPath();
                 ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-                ctx.strokeStyle = '#ffd700'; // 金色
+                ctx.strokeStyle = '#ffd700'; 
                 ctx.lineWidth = 3;
                 ctx.shadowBlur = 10;
                 ctx.shadowColor = '#ffd700';
                 ctx.stroke();
                 ctx.shadowBlur = 0; 
             } else {
-                // 如果图片没加载出来，显示金色圆圈保底
                 ctx.beginPath();
                 ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
                 ctx.fillStyle = '#ffd700';
@@ -264,16 +249,13 @@
             }
             ctx.shadowBlur = 0;
 
-            // 绘制星光弹幕
             for (let i = enemies.length - 1; i >= 0; i--) {
                 let e = enemies[i];
                 
-                // 增加一点轻微的螺旋/漂移轨迹，增加难度
                 e.phase += 0.05;
                 e.x += e.vx + Math.sin(e.phase) * 0.5;
                 e.y += e.vy + Math.cos(e.phase) * 0.5;
 
-                // 画星光
                 ctx.beginPath();
                 ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
                 ctx.fillStyle = e.color;
@@ -282,7 +264,6 @@
                 ctx.fill();
                 ctx.shadowBlur = 0;
 
-                // 碰撞检测
                 const dist = Math.hypot(player.x - e.x, player.y - e.y);
                 if (dist < player.radius + e.radius - 5) {
                     enemies.splice(i, 1);
@@ -318,16 +299,14 @@
             hpEl.textContent = `咕咕体力: ${diamonds}`;
         }
 
-                function winGame() {
+        function winGame() {
             gameState = 'over';
             cancelAnimationFrame(gameLoop);
             clearInterval(spawnInterval);
             
-            // 👇 新增：通关时，立刻把酒馆音乐关掉
             const gameBgm = document.getElementById('game-bgm');
             if (gameBgm) gameBgm.pause();
 
-            // 播放你的专属通关录音
             winSound.play().catch(e => console.log(e));
 
             endTitle.textContent = "✨ 走位大师！";
@@ -355,11 +334,8 @@
         restartBtn.addEventListener('click', startGame);
         
         showGiftBtn.addEventListener('click', () => {
-                showGiftBtn.addEventListener('click', () => {
-            // 1. 记录通关
             localStorage.setItem('gameCleared', 'true');
 
-            // 2. 创建全屏弹窗
             const wechatModal = document.createElement('div');
             wechatModal.style.cssText = `
                 position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -368,15 +344,80 @@
                 overflow: hidden; 
             `;
 
-            // ... (中间的烟花代码全部粘贴进来) ...
+            const canvas = document.createElement('canvas');
+            canvas.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;';
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            wechatModal.appendChild(canvas);
 
-            // 关闭弹窗并清理定时器
+            const contentDiv = document.createElement('div');
+            contentDiv.style.cssText = 'position: relative; z-index: 1000; text-align: center; background: rgba(13, 13, 26, 0.9); padding: 30px; border-radius: 15px; border: 3px solid #00e5ff; box-shadow: 0 0 30px #00e5ff;';
+            contentDiv.innerHTML = `
+                <h2 style="color: #ffd700; margin-bottom: 10px; text-shadow: 0 0 15px #ffd700; font-size: 2rem;">🎉 恭喜通关！</h2>
+                <p style="color: #fff; margin-bottom: 20px; font-size: 1.1rem;">贺贺，快扫码加上我的微信，领取你的专属生日礼物！</p>
+                <img src="wechat.png" alt="微信二维码" style="width: 200px; height: 200px; border: 3px solid #fff; border-radius: 10px; padding: 5px; background: #fff; box-shadow: 0 0 20px rgba(255,255,255,0.5);">
+                <button id="close-wechat" style="display: block; margin: 20px auto 0; padding: 10px 30px; font-size: 1.1rem; background: #4a148c; color: #fff; border: 2px solid #00e5ff; border-radius: 6px; cursor: pointer;">收起</button>
+            `;
+            wechatModal.appendChild(contentDiv);
+            document.body.appendChild(wechatModal);
+
+            const ctx = canvas.getContext('2d');
+            let particles = [];
+            let animationFrameId;
+
+            class Particle {
+                constructor(x, y, color) {
+                    this.x = x; this.y = y;
+                    this.vx = Math.random() * 8 - 4;
+                    this.vy = Math.random() * 8 - 4;
+                    this.color = color;
+                    this.alpha = 1;
+                    this.decay = Math.random() * 0.02 + 0.015;
+                    this.size = Math.random() * 3 + 1;
+                }
+                update() {
+                    this.x += this.vx; this.y += this.vy;
+                    this.vy += 0.05;
+                    this.alpha -= this.decay;
+                }
+                draw() {
+                    ctx.globalAlpha = this.alpha;
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            const colors = ['#ff0000', '#ffd700', '#00e5ff', '#ff69b4', '#32cd32'];
+
+            function createFirework() {
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height * 0.6;
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                for (let i = 0; i < 50; i++) {
+                    particles.push(new Particle(x, y, color));
+                }
+            }
+
+            let fireworkTimer = setInterval(createFirework, 400);
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    particles[i].update();
+                    particles[i].draw();
+                    if (particles[i].alpha <= 0) particles.splice(i, 1);
+                }
+                animationFrameId = requestAnimationFrame(animate);
+            }
+            animate();
+
             document.getElementById('close-wechat').addEventListener('click', () => {
                 clearInterval(fireworkTimer);
                 cancelAnimationFrame(animationFrameId);
                 wechatModal.remove();
             });
-        });
         });
     </script>
 </body>
